@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TH 25.97</title>
+    <link rel="icon" href="https://i.imgur.com/HkRkFOE.png" type="image/png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh; /* Ocupa 100% da altura da tela */
+            height: 100dvh; /* Ajuste para mobile (barra de endereço) */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #ffffff;
+            overflow: hidden; /* Evita barras de rolagem durante a animação de zoom */
+            background-color: #1e1e2f; /* Cor de fundo de segurança */
+            cursor: none !important; /* Força esconder o cursor padrão */
+        }
+
+        h1 {
+            font-weight: 300;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 30px;
+            font-size: 1.5rem;
+            position: relative;
+        }
+
+        audio {
+            width: 80%;
+            max-width: 450px;
+            border-radius: 30px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3); /* Sombra suave */
+            outline: none;
+            cursor: none !important; /* Força esconder o cursor padrão no player */
+        }
+
+        /* Força esconder cursor nos controles nativos do áudio (Chrome/Edge) */
+        audio::-webkit-media-controls-panel,
+        audio::-webkit-media-controls-play-button,
+        audio::-webkit-media-controls-current-time-display,
+        audio::-webkit-media-controls-time-remaining-display,
+        audio::-webkit-media-controls-timeline,
+        audio::-webkit-media-controls-volume-slider-container,
+        audio::-webkit-media-controls-volume-slider,
+        audio::-webkit-media-controls-mute-button,
+        audio::-webkit-media-controls-fullscreen-button {
+            cursor: none !important;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            z-index: 1; /* Garante que fique acima do canvas */
+            position: relative;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: none !important; /* Força esconder o cursor padrão nos botões */
+            font-family: inherit;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            font-size: 1.2rem; /* Aumenta o tamanho do ícone */
+        }
+
+        button:hover, button.active {
+            background: rgba(255, 255, 255, 0.3);
+            color: #ffffff;
+            font-weight: bold;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        button.active::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: #00ff7f; /* Verde neon */
+            border-radius: 50%;
+            margin-right: 8px;
+            box-shadow: 0 0 10px #00ff7f;
+            vertical-align: middle;
+        }
+
+        button i {
+            pointer-events: none; /* Evita conflitos de animação no cursor */
+        }
+
+        .live-wallpaper {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2; /* Fica atrás das partículas e do player */
+            /* Imagem de fundo (exemplo: luzes abstratas/cidade noturna) */
+            background: url('https://i.imgur.com/hP9cpj5.jpeg') no-repeat center center;
+            background-size: cover;
+            filter: brightness(0.5); /* Escurece a imagem para destacar o texto */
+            animation: breathe 25s ease-in-out infinite alternate;
+        }
+
+        @keyframes breathe {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.15); }
+        }
+
+        #starfield {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; /* Fica sobre o fundo, mas atrás do texto */
+            pointer-events: none;
+        }
+
+        /* Efeito de Neblina (Fog) */
+        .fog-layer-1, .fog-layer-2 {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2; /* Acima do wallpaper, abaixo das estrelas */
+            pointer-events: none;
+            background-size: 200% 100%;
+            background-repeat: repeat-x;
+        }
+        .fog-layer-1 {
+            background-image: url('https://raw.githubusercontent.com/danielstuart14/CSS_FOG_ANIMATION/master/fog1.png');
+            opacity: 0.3;
+            animation: fog-move 60s linear infinite;
+        }
+        .fog-layer-2 {
+            background-image: url('https://raw.githubusercontent.com/danielstuart14/CSS_FOG_ANIMATION/master/fog2.png');
+            opacity: 0.2;
+            animation: fog-move 45s linear infinite reverse;
+        }
+        @keyframes fog-move {
+            0% { background-position: 0 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Responsividade para Mobile */
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.2rem;
+                margin-bottom: 20px;
+            }
+            audio {
+                width: 95%;
+            }
+            .controls {
+                gap: 8px;
+            }
+            button {
+                padding: 8px 16px;
+                font-size: 1rem;
+            }
+        }
+
+        /* Cursor Personalizado */
+        #custom-cursor {
+            position: fixed;
+            top: 0;
+            left: 0;
+            display: none; /* Começa invisível para não ficar parado no canto */
+            pointer-events: none;
+            z-index: 9999;
+            color: #e0ffff; /* Azul bem claro (quase branco) */
+            font-size: 24px;
+            text-shadow: 0 0 10px #b9fcfc, 0 0 20px #99d1d1;
+            transition: transform 0.2s ease;
+            transform-origin: top left; /* Garante que a ponta da seta fique fixa ao aumentar */
+        }
+
+        /* Efeito ao passar sobre links/botões */
+        #custom-cursor.hover {
+            transform: scale(1.3);
+            text-shadow: 0 0 20px #bfffff, 0 0 40px #b0e6e6fd;
+        }
+
+        /* Rodapé */
+        footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            padding: 8px 0;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.5);
+            background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
+            z-index: 10;
+        }
+        footer a {
+            color: inherit;
+            text-decoration: none;
+            cursor: none !important;
+            transition: color 0.3s;
+        }
+        footer a:hover {
+            color: #ffffff;
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+        }
+
+        /* Restaura cursor normal em mobile/touch */
+        @media (hover: none) and (pointer: coarse) {
+            #custom-cursor { display: none !important; }
+            body, button, audio, footer a { cursor: auto !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="custom-cursor"><i class="fa-solid fa-arrow-pointer"></i></div>
+    <div class="live-wallpaper"></div>
+    <div class="fog-layer-1"></div>
+    <div class="fog-layer-2"></div>
+    <canvas id="starfield"></canvas>
+    <h1>THALIA 25.97</h1>
+    <div id="stationButtons" class="controls"></div>
+    <footer>
+        <a href="mailto:thaliasara8.work@gmail.com">Clique para entrar em contato!</a>
+    </footer>
+
+    <!-- 
+      A tag <audio> cria o player.
+      controls: Mostra os botões de play/pause e volume.
+      autoplay: Tenta iniciar o áudio assim que a página carrega.
+    -->
+    <audio id="radioPlayer" controls autoplay>
+        Seu navegador não suporta o elemento de áudio.
+    </audio>
+
+    <script>
+        const player = document.getElementById('radioPlayer');
+        const buttonsContainer = document.getElementById('stationButtons');
+        const customCursor = document.getElementById('custom-cursor');
+        
+        // Lista de estações (Range de rádios)
+        const stations = [
+            { icon: "fa-solid fa-tower-broadcast", name: "Rádio Mundo", url: "https://radio.saopaulo01.com.br/8236/stream" },
+            { icon: "fa-solid fa-guitar", name: "Sertanejo FM", url: "https://stream.zeno.fm/vgjk1f5rgu8uv" },
+            { icon: "fa-solid fa-life-ring", name: "Pop FM", url: "https://radiosocorro.jmvstream.com/stream" },
+            { icon: "fa-solid fa-bullseye", name: "Hunter FM", url: "https://live.hunter.fm/pop_normal" },
+            { icon: "fa-solid fa-bolt", name: "Stream Max", url: "https://cc6.streammaximum.com:20022/stream?nocache=1770177246935" },
+            { icon: "fa-solid fa-record-vinyl", name: "Indie FM", url: "https://azura.ez1fm.com/listen/indie/radio.mp3/stream" }
+        ];
+
+        let currentStationIndex = 0;
+
+        function loadStation(index) {
+            currentStationIndex = index;
+            player.src = stations[index].url;
+            player.play();
+            updateButtons();
+        }
+
+        function updateButtons() {
+            const btns = buttonsContainer.querySelectorAll('button');
+            btns.forEach((btn, idx) => {
+                if (idx === currentStationIndex) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+        }
+
+        stations.forEach((station, index) => {
+            const btn = document.createElement('button');
+            btn.innerHTML = `<i class="${station.icon}"></i>`;
+            btn.title = station.name; // Tooltip com o nome
+            btn.onclick = () => loadStation(index);
+            buttonsContainer.appendChild(btn);
+        });
+
+        loadStation(0);
+
+        // Se der erro (offline ou falha), troca para a próxima
+        player.addEventListener('error', function() {
+            console.log("Estação indisponível, trocando para a próxima...");
+            let nextIndex = (currentStationIndex + 1) % stations.length;
+            loadStation(nextIndex);
+        });
+
+        // --- Efeito de Estrelas Interativas (Canvas) ---
+        const canvas = document.getElementById('starfield');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let stars = [];
+        let shootingStars = [];
+        const mouse = { x: null, y: null, radius: 150 }; // Raio de interação
+
+        window.addEventListener('resize', resize);
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+        window.addEventListener('mouseout', () => {
+            mouse.x = null;
+            mouse.y = null;
+        });
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            initStars();
+        }
+
+        class Star {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.size = Math.random() * 1.0 + 1.0; // Aumentado um pouco o tamanho
+                this.baseX = this.x;
+                this.baseY = this.y;
+                this.density = (Math.random() * 20) + 5; // Quão leve é a estrela
+                this.opacity = Math.random();
+                this.twinkleSpeed = Math.random() * 0.02 + 0.005; // Velocidade do ciclo mais lenta
+                this.angle = Math.random() * Math.PI * 2; // Fase inicial aleatória para cada estrela
+                this.hue = Math.random() * 360; // Cor aleatória para o arco-íris
+            }
+            draw() {
+                ctx.fillStyle = `hsla(${this.hue}, 70%, 80%, ${this.opacity})`; // Cores pastéis
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            update() {
+                // Mudança de cor lenta
+                this.hue += 0.2;
+
+                // Piscar Orgânico (Sine Wave)
+                this.angle += this.twinkleSpeed;
+                this.opacity = 0.2 + (Math.sin(this.angle) + 1) * 0.4; // Oscila suavemente entre 0.2 e 1.0
+
+                // Interação Mouse
+                let dx = mouse.x - this.x;
+                let dy = mouse.y - this.y;
+                let distance = Math.sqrt(dx*dx + dy*dy);
+                
+                if (mouse.x && distance < mouse.radius) {
+                    const forceDirectionX = dx / distance;
+                    const forceDirectionY = dy / distance;
+                    const force = (mouse.radius - distance) / mouse.radius;
+                    const directionX = forceDirectionX * force * this.density;
+                    const directionY = forceDirectionY * force * this.density;
+                    this.x -= directionX * 3;
+                    this.y -= directionY * 3;
+                } else {
+                    if (this.x !== this.baseX) this.x -= (this.x - this.baseX) / 20;
+                    if (this.y !== this.baseY) this.y -= (this.y - this.baseY) / 20;
+                }
+            }
+        }
+
+        class ShootingStar {
+            constructor() {
+                this.x = Math.random() * width; // Começa em ponto aleatório X
+                this.y = Math.random() * (height * 0.4); // Apenas na parte superior (40%)
+                this.len = (Math.random() * 80) + 10; // Comprimento do rastro
+                this.speed = (Math.random() * 5) + 4; // Velocidade (ligeiramente mais lenta)
+                this.life = 1.0;
+                this.decay = (Math.random() * 0.03) + 0.01; // Define onde termina (aleatório)
+                // Escolhe cor aleatória: Azulada (200-260) ou Avermelhada (330-390)
+                this.hue = Math.random() > 0.5 ? (Math.random() * 60 + 200) : (Math.random() * 60 + 330);
+            }
+            draw() {
+                // Gradiente: Cabeça branca -> Cauda colorida e transparente
+                const gradient = ctx.createLinearGradient(this.x, this.y, this.x + this.len, this.y);
+                gradient.addColorStop(0, `rgba(255, 255, 255, ${this.life})`);
+                gradient.addColorStop(1, `hsla(${this.hue}, 100%, 60%, 0)`);
+
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x + this.len, this.y); // Desenha rastro para trás (direita)
+                ctx.stroke();
+            }
+            update() {
+                this.x -= this.speed; // Move para a esquerda
+                this.life -= this.decay; // Desaparece
+            }
+        }
+
+        function initStars() {
+            stars = [];
+            for (let i = 0; i < 150; i++) stars.push(new Star());
+        }
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            
+            stars.forEach(star => { star.draw(); star.update(); });
+            
+            // Lógica de Estrelas Cadentes
+            if (Math.random() < 0.001) { // 0.1% de chance por quadro (menos frequente)
+                shootingStars.push(new ShootingStar());
+            }
+            for (let i = 0; i < shootingStars.length; i++) {
+                shootingStars[i].draw();
+                shootingStars[i].update();
+                // Remove se sair da tela
+                if (shootingStars[i].life <= 0 || shootingStars[i].x < -100) {
+                    shootingStars.splice(i, 1);
+                    i--;
+                }
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        resize();
+        animate();
+
+        // --- Lógica do Cursor Personalizado ---
+        document.addEventListener('mousemove', (e) => {
+            customCursor.style.display = 'block'; // Mostra apenas quando o mouse mexe
+            customCursor.style.left = e.clientX + 'px';
+            customCursor.style.top = e.clientY + 'px';
+        });
+
+        // Detecta hover em elementos interativos para animar o cursor
+        document.addEventListener('mouseover', (e) => {
+            if (e.target.closest('button') || e.target.tagName === 'AUDIO' || e.target.closest('a')) {
+                customCursor.classList.add('hover');
+            }
+        });
+        document.addEventListener('mouseout', (e) => {
+            if (e.target.closest('button') || e.target.tagName === 'AUDIO' || e.target.closest('a')) {
+                customCursor.classList.remove('hover');
+            }
+        });
+    </script>
+</body>
+</html>
